@@ -1,66 +1,48 @@
-# 🌋 Vulkan Starter App
+# Лабораторная работа №1 по компьютерной графике
 
-## Getting started
+**Вариант 2: правильный октаэдр.** Программа рисует два экземпляра фигуры через Vulkan и предоставляет управление через ImGui. Исходный шаблон: [vladeemerr/vulkan-starter-app](https://github.com/vladeemerr/vulkan-starter-app).
 
-You need C++ compiler, Vulkan SDK and CMake installed before you can build this project.
+cd /Users/myshakinm/study/computer_graphics_lab1
+source "$HOME/VulkanSDK/1.4.321.0/setup-env.sh"
+./build-debug/vulkan-starter-app - запуск
 
-This project uses C++20 standard and thus requires either of those compilers:
-- GCC 10.X
-- Clang 10
-- Microsoft Visual Studio 2019
+![Два октаэдра и панель управления](docs/preview.png)
 
-This is officially tested on *Windows* and *GNU/Linux platforms*, no *macOS* support yet.
-If you have a working macOS solution of this code, consider submitting a PR so others
-can build this example code without a hassle!
+## Возможности
 
-<ins>**1. Downloading the repository**</ins>
+- Шесть геометрических вершин и восемь правильных треугольных граней; грани имеют плоские нормали и освещение, чтобы объём был виден.
+- Переключение перспективной и ортографической проекции.
+- Независимые положение, поворот, масштаб и цвет каждого объекта.
+- Движение по пространственной траектории и вращение с паузой, регулировкой скорости, радиуса и высоты.
+- Процедурные цвета вершин, вычисленные из локальных координат; выбранный в интерфейсе цвет умножается на них.
+- Два объекта используют общую геометрию, но разные uniform-буферы и `VkDescriptorSet`.
 
-Start by cloning the repository with `git clone --depth 1 https://github.com/vladeemerr/vulkan-starter-app`
+## Сборка на macOS
 
-This repository does not contain any submodules, it utilizes CMake's `FetchContent` feature instead.
-
-<ins>**2. Configuring the project**</ins>
-
-Run either one of the CMake lines to download dependencies and configure the project:
+Нужны компилятор C++20, CMake, Ninja и [Vulkan SDK для macOS](https://vulkan.lunarg.com/sdk/home). SDK должен содержать `glslc`. Проверено на Apple M3 Pro с Vulkan SDK 1.4.321.0 и MoltenVK.
 
 ```bash
-cmake --preset debug       # for GNU/Linux (GCC/Clang)
-cmake --preset msvc-debug  # for Windows (Visual Studio 2019)
-cmake --preset mingw-debug # for Windows (MinGW)
+brew install cmake ninja
+source "$HOME/VulkanSDK/1.4.321.0/setup-env.sh" # поправьте путь, если выбрали другую папку
+command -v glslc
+cmake --preset debug
+cmake --build build-debug --parallel
+./build-debug/vulkan-starter-app
 ```
 
-If you wish to build in `release` mode, change `debug` to `release`.
+Запускать программу нужно **из корня репозитория**, где лежит папка `shaders`. На первой конфигурации CMake скачивает зависимости с GitHub. Если `glslc` отсутствует в `PATH`, конфигурация остановится с ошибкой.
 
-If changes are made (added/removed files), or if you want to regenerate project files, rerun the command above.
+## Проверка
 
-<ins>**3. Building**</ins>
+1. При запуске видны два октаэдра и панель управления слева.
+2. Переключатель **Perspective projection** меняет проекцию для обоих объектов.
+3. **Play animation** останавливает и продолжает движение; **Speed**, **Orbit radius** и **Orbit height** меняют траекторию.
+4. На вкладках **Octahedron 1** и **Octahedron 2** независимо меняются положение, поворот, масштаб и **Color multiplier**.
+5. После изменения размера окна фигуры остаются видимыми, а в консоли нет сообщений валидации Vulkan.
 
-To build the project, use the line below. You are most likely using `debug` preset, so
-the directory that will eventually contain your build files is named `build-debug`.
+## Где находится код
 
-Likewise for `release` that directory will be named `build-release`
-
-Run one those commands, depending on which preset you chose:
-
-```bash
-cmake --build build-debug --parallel # for debug
-cmake --build build-release --parallel # for release
-```
-
-### Running
-
-`build-*` directory will contain the executable in one of the subdirectories after successful build.
-
-For `msvc-{debug|release}` builds output subdirectory is set to `Debug` or `Release` respectively.
-For other configurations output subdirectory is set to `vulkan-starter-app`.
-
-**Make sure your working directory is set to the project root!**
-Project root is where this README file resides. Otherwise, the
-code responsible for loading shaders or other resources from files will fail,
-because relative paths are used.
-
-### Compiling shaders
-
-`CMakeLists.txt` has a build recipe for compiling shader files
-along with an application. Look for a comment in this file to see
-how to compile your shaders.
+- `source/application.cpp` — геометрия, Vulkan-ресурсы, матрицы, анимация, интерфейс и запись команд рисования.
+- `shaders/octahedron.vert` и `shaders/octahedron.frag` — преобразование вершин, цвета и освещение граней.
+- `source/graphics_internal.cpp` и `source/main.cpp` — стартовый код преподавателя; исправлены проверка результата показа кадра и код возврата из `main`.
+- `CMakeLists.txt` — подключение GLM и компиляция GLSL в SPIR-V.
