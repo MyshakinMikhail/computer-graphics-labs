@@ -1,6 +1,8 @@
 #include "graphics_internal.hpp"
 
 #include <iostream>
+#include <atomic>
+#include <stdexcept>
 #include <vector>
 
 #include <vulkan/vulkan.h>
@@ -26,6 +28,15 @@ namespace graphics::internal {
 namespace {
 
 VkInstance vk_instance;
+VkDebugUtilsMessengerEXT vk_debug_messenger;
+std::atomic<uint32_t> validation_errors{0};
+
+VKAPI_ATTR VkBool32 VKAPI_CALL validation_callback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT type,
+    const VkDebugUtilsMessengerCallbackDataEXT* data, void* user) {
+    if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) ++validation_errors;
+    return vkb::default_debug_callback(severity, type, data, user);
+}
 uint32_t vk_api_version;
 VkSurfaceKHR vk_surface;
 
@@ -386,14 +397,20 @@ bool rebuildSwapchain(uint32_t width, uint32_t height) {
 
 Context context;
 
+uint32_t validationErrorCount() { return validation_errors.load(); }
+
 bool initialize(GLFWwindow* const window) {
 	vkb::InstanceBuilder ib;
 
 	auto ibr = ib.require_api_version(VK_MAKE_VERSION(1, 1, 0))
 				 .request_validation_layers()
+                 .use_default_debug_messenger()
+                 .set_debug_callback(validation_callback)
 				 .build();
 
+	if (!ibr) { std::cerr << ibr.error().message() << '\n'; return false; }
 	auto vkb_instance = ibr.value();
+    vk_debug_messenger = vkb_instance.debug_messenger;
 	vk_instance = vkb_instance.instance;
 	vk_api_version = vkb_instance.api_version;
 
@@ -568,12 +585,27 @@ bool initialize(GLFWwindow* const window) {
 		.pDepthStencilAttachment = &render_pass_depth_attachment,
 	};
 
+    // Chain the acquire semaphore wait (COLOR_ATTACHMENT_OUTPUT) to the implicit
+    // initial layout transition. The default TOP_OF_PIPE dependency is insufficient.
+    const VkSubpassDependency scene_dependency = {
+        .srcSubpass = VK_SUBPASS_EXTERNAL,
+        .dstSubpass = 0,
+        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+                        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+                        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        .srcAccessMask = 0,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+                         VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+    };
 	const VkRenderPassCreateInfo render_pass = {
 		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 		.attachmentCount = sizeof(render_pass_attachments) / sizeof(render_pass_attachments[0]),
 		.pAttachments = render_pass_attachments,
 		.subpassCount = 1,
 		.pSubpasses = &render_pass_subpass,
+        .dependencyCount = 1,
+        .pDependencies = &scene_dependency,
 	};
 
 	if (vkCreateRenderPass(context.device, &render_pass, nullptr, &context.render_pass) != VK_SUCCESS) {
@@ -705,6 +737,7 @@ void shutdown() {
 	vkDestroyDevice(context.device, nullptr);
 
 	vkDestroySurfaceKHR(vk_instance, vk_surface, nullptr);
+    vkb::destroy_debug_utils_messenger(vk_instance, vk_debug_messenger);
 	vkDestroyInstance(vk_instance, nullptr);
 }
 

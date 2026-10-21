@@ -2,8 +2,6 @@
 
 #include <imgui.h>
 
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -140,8 +138,8 @@ bool create_descriptors() {
 
 bool create_pipeline() {
     auto& ctx = graphics::internal::context;
-    const VkShaderModule vert = load_shader("shaders/octahedron.vert.spv");
-    const VkShaderModule frag = load_shader("shaders/octahedron.frag.spv");
+    const VkShaderModule vert = load_shader(LAB_SHADER_DIR "/octahedron.vert.spv");
+    const VkShaderModule frag = load_shader(LAB_SHADER_DIR "/octahedron.frag.spv");
     if (!vert || !frag) {
         if (vert) vkDestroyShaderModule(ctx.device, vert, nullptr);
         if (frag) vkDestroyShaderModule(ctx.device, frag, nullptr);

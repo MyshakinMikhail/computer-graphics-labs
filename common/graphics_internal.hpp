@@ -39,5 +39,6 @@ void resize(uint32_t width, uint32_t height);
 
 FrameData prepare();
 void submitAndPresent();
+uint32_t validationErrorCount();
 
 } // namespace graphics::internal

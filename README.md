@@ -1,48 +1,68 @@
-# Лабораторная работа №1 по компьютерной графике
+# Лабораторные работы по компьютерной графике
 
-**Вариант 2: правильный октаэдр.** Программа рисует два экземпляра фигуры через Vulkan и предоставляет управление через ImGui. Исходный шаблон: [vladeemerr/vulkan-starter-app](https://github.com/vladeemerr/vulkan-starter-app).
+Vulkan, GLFW, Dear ImGui, C++20. **Вариант 2 — правильный октаэдр.**
+Основа проекта: [vladeemerr/vulkan-starter-app](https://github.com/vladeemerr/vulkan-starter-app).
 
-cd /Users/myshakinm/study/computer_graphics_lab1
-source "$HOME/VulkanSDK/1.4.321.0/setup-env.sh"
-./build-debug/vulkan-starter-app - запуск
+| Работа | Содержание | Документация |
+| --- | --- | --- |
+| №1 | Два октаэдра, проекции, преобразования и анимация | [labs/lab1](labs/lab1/README.md) |
+| №2 | Камера, материалы Блинна–Фонга, направленный свет, динамические массивы точечных источников и прожекторов, визуализация источников | [labs/lab2](labs/lab2/README.md) |
 
-![Два октаэдра и панель управления](docs/preview.png)
-
-## Возможности
-
-- Шесть геометрических вершин и восемь правильных треугольных граней; грани имеют плоские нормали и освещение, чтобы объём был виден.
-- Переключение перспективной и ортографической проекции.
-- Независимые положение, поворот, масштаб и цвет каждого объекта.
-- Движение по пространственной траектории и вращение с паузой, регулировкой скорости, радиуса и высоты.
-- Процедурные цвета вершин, вычисленные из локальных координат; выбранный в интерфейсе цвет умножается на них.
-- Два объекта используют общую геометрию, но разные uniform-буферы и `VkDescriptorSet`.
+![Лабораторная №2](labs/lab2/docs/preview.png)
 
 ## Сборка на macOS
 
-Нужны компилятор C++20, CMake, Ninja и [Vulkan SDK для macOS](https://vulkan.lunarg.com/sdk/home). SDK должен содержать `glslc`. Проверено на Apple M3 Pro с Vulkan SDK 1.4.321.0 и MoltenVK.
+Нужны CMake, Ninja, компилятор C++20 и [Vulkan SDK](https://vulkan.lunarg.com/sdk/home) с MoltenVK и `glslc`.
+Команды выполняются из корня этого репозитория:
 
 ```bash
 brew install cmake ninja
-source "$HOME/VulkanSDK/1.4.321.0/setup-env.sh" # поправьте путь, если выбрали другую папку
-command -v glslc
+source "$HOME/VulkanSDK/1.4.321.0/setup-env.sh" # укажите установленную версию SDK
 cmake --preset debug
 cmake --build build-debug --parallel
-./build-debug/vulkan-starter-app
+./build-debug/lab2
 ```
 
-Запускать программу нужно **из корня репозитория**, где лежит папка `shaders`. На первой конфигурации CMake скачивает зависимости с GitHub. Если `glslc` отсутствует в `PATH`, конфигурация остановится с ошибкой.
+Первая конфигурация скачивает зависимости с GitHub. Шейдеры автоматически компилируются в `build-debug/shaders/lab1` и `build-debug/shaders/lab2`. Путь к ним задаётся при сборке: запускать программы можно из любой рабочей директории. При переносе репозитория в другую папку пересоздайте каталог сборки.
+
+Обе лабораторные собираются независимо:
+
+```bash
+cmake --build build-debug --target lab1 --parallel
+./build-debug/lab1
+cmake --build build-debug --target lab2 --parallel
+./build-debug/lab2
+```
+
+На Linux и Windows используется тот же CMake-проект. Установите Vulkan SDK и платформенные зависимости GLFW; доступны также пресеты `release`, `msvc-debug`, `msvc-release`, `mingw-debug`, `mingw-release`. Выполнявшаяся здесь проверка графики — macOS/MoltenVK.
+
+## Структура
+
+```text
+common/                 # GLFW/ImGui main loop и общий Vulkan backend
+labs/lab1/source/       # исходная лабораторная №1
+labs/lab1/shaders/
+labs/lab2/source/       # камера, геометрия, состояние сцены, интерфейс, renderer
+labs/lab2/shaders/      # освещение и отдельная отрисовка обозначений источников
+labs/lab2/tests/        # проверки геометрии, камеры, математики и GPU layout
+```
+
+Каждая лабораторная имеет свою исполняемую цель, шейдеры, README и настройки ImGui. Лабораторная №1 сохраняет исходные возможности; общий код запуска используется обеими работами.
 
 ## Проверка
 
-1. При запуске видны два октаэдра и панель управления слева.
-2. Переключатель **Perspective projection** меняет проекцию для обоих объектов.
-3. **Play animation** останавливает и продолжает движение; **Speed**, **Orbit radius** и **Orbit height** меняют траекторию.
-4. На вкладках **Octahedron 1** и **Octahedron 2** независимо меняются положение, поворот, масштаб и **Color multiplier**.
-5. После изменения размера окна фигуры остаются видимыми, а в консоли нет сообщений валидации Vulkan.
+```bash
+ctest --test-dir build-debug --output-on-failure
+./build-debug/lab1 --frames 15
+./build-debug/lab2 --exercise
+```
 
-## Где находится код
+`--exercise` автоматически завершает работу после 110 кадров. Проверяет пустые массивы, рост обоих storage-буферов до 37 источников, удаление источников, равные углы прожектора, нулевые направления, неравномерный масштаб, анимацию и изменение размера окна. `--frames N` ограничивает длительность обычного запуска.
 
-- `source/application.cpp` — геометрия, Vulkan-ресурсы, матрицы, анимация, интерфейс и запись команд рисования.
-- `shaders/octahedron.vert` и `shaders/octahedron.frag` — преобразование вершин, цвета и освещение граней.
-- `source/graphics_internal.cpp` и `source/main.cpp` — стартовый код преподавателя; исправлены проверка результата показа кадра и код возврата из `main`.
-- `CMakeLists.txt` — подключение GLM и компиляция GLSL в SPIR-V.
+Для проверки синхронизации с установленным validation layer:
+
+```bash
+VK_LAYER_ENABLES=VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT ./build-debug/lab2 --exercise
+```
+
+Ошибки Vulkan validation выводятся в консоль и приводят к ненулевому коду завершения. Подробный сценарий проверки и соответствие заданию — в [README второй лабораторной](labs/lab2/README.md).
