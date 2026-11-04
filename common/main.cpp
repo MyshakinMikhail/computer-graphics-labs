@@ -22,10 +22,10 @@ Options parse_options(int argc, char** argv) {
             if(end!=value.size()||count==0||count>1000000)throw std::runtime_error("Invalid frame count");
             options.frames=unsigned(count);
         } else if(arg=="--exercise") {
-#if LAB_NUMBER == 2
+#if LAB_NUMBER >= 2
             options.exercise=true;
 #else
-            throw std::runtime_error("--exercise is available in lab2");
+            throw std::runtime_error("--exercise is available in lab2 and lab3");
 #endif
         } else throw std::runtime_error("Usage: lab"+std::to_string(LAB_NUMBER)+" [--frames N] [--exercise]");
     }
@@ -64,7 +64,7 @@ int main(int argc,char** argv) {
             int width=0,height=0;glfwGetFramebufferSize(window,&width,&height);
             if(width==0||height==0){glfwWaitEvents();continue;}
             ImGui_ImplGlfw_NewFrame();ImGui::NewFrame();
-#if LAB_NUMBER == 2
+#if LAB_NUMBER >= 2
             if(options.exercise) {
                 application::exercise(frame);
                 if(frame==30)glfwSetWindowSize(window,1024,768);
